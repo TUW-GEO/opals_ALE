@@ -21,13 +21,21 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon
+from PyQt4.QtGui import QAction, QIcon, QColor
+
+from qgis.core import *
+from qgis.gui import *
+
+from tools import rmEdgeTool, rmVertexTool, closeGapTool
+
 # Initialize Qt resources from file resources.py
-import resources
+#import resources
+
+from tools import closering
 
 # Import the code for the DockWidget
-from advanced_line_editor_dockwidget import ALEDockWidget
 import os.path
+
 
 
 class ALE:
@@ -61,6 +69,9 @@ class ALE:
             if qVersion() > '4.3.3':
                 QCoreApplication.installTranslator(self.translator)
 
+        if not QSettings().value('ale/threshold', None):
+            QSettings().setValue('ale/threshold', 10)
+
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Advanced Line Editor')
@@ -71,7 +82,7 @@ class ALE:
         #print "** INITIALIZING ALE"
 
         self.pluginIsActive = False
-        self.dockwidget = None
+
 
 
     # noinspection PyMethodMayBeStatic
@@ -100,7 +111,8 @@ class ALE:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
+        parent=None,
+        checkable=False):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -145,6 +157,9 @@ class ALE:
         action.triggered.connect(callback)
         action.setEnabled(enabled_flag)
 
+        if checkable:
+            action.setCheckable(True)
+
         if status_tip is not None:
             action.setStatusTip(status_tip)
 
@@ -167,12 +182,25 @@ class ALE:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/ALE/icon.png'
-        self.add_action(
-            icon_path,
-            text=self.tr(u'ALE'),
-            callback=self.run,
-            parent=self.iface.mainWindow())
+        self.add_action(os.path.join(self.plugin_dir, 'imgs', 'closering.png'),
+                        'Close polygon',
+                        self.closering,
+                        status_tip='Close polygon')
+        self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
+                        'Split at segment',
+                        self.splitsegment,
+                        status_tip='Split at segment',
+                        checkable=True)
+        self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
+                        'Join lines',
+                        self.joinlines,
+                        status_tip='Join lines',
+                        checkable=True)
+        self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
+                        'Remove vertex and split',
+                        self.splitvertex,
+                        status_tip='Remove vertex and split',
+                        checkable=True)
 
     #--------------------------------------------------------------------------
 
@@ -181,8 +209,6 @@ class ALE:
 
         #print "** CLOSING ALE"
 
-        # disconnects
-        self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
 
         # remove this statement if dockwidget is to remain
         # for reuse if plugin is reopened
@@ -214,20 +240,39 @@ class ALE:
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
-            #print "** STARTING ALE"
+    def closering(self):
+        # get selected layer:
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            if layer.selectedFeatureCount() > 0:
+                features = layer.selectedFeatures()
+                for feat in features:
+                    geom = feat.geometry().asPolyline()
+                    geom.append(geom[0])
+                    polyline = QgsGeometry.fromPolyline(geom)
+                    layer.changeGeometry(feat.id(), polyline)
+        self.iface.mapCanvas().refresh()
 
-            # dockwidget may not exist if:
-            #    first run of plugin
-            #    removed on close (see self.onClosePlugin method)
-            if self.dockwidget == None:
-                # Create the dockwidget (after translation) and keep reference
-                self.dockwidget = ALEDockWidget()
+    def splitsegment(self):
+        # get selected layer:
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            etool = rmEdgeTool(self.iface.mapCanvas(), layer, self.iface, self.splitsegmentaction)
+            self.iface.mapCanvas().setMapTool(etool)
 
-            # connect to provide cleanup on closing of dockwidget
-            self.dockwidget.closingPlugin.connect(self.onClosePlugin)
+    def splitvertex(self):
+        # get selected layer:
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            vtool = rmVertexTool(self.iface.mapCanvas(), layer, self.iface, self.splitvertexaction)
+            self.iface.mapCanvas().setMapTool(vtool)
 
-            # show the dockwidget
-            # TODO: fix to allow choice of dock location
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
-            self.dockwidget.show()
+
+    def joinlines(self):
+        # get selected layer:
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            gtool = closeGapTool(self.iface.mapCanvas(), layer, self.iface, self.joinlinesaction)
+            self.iface.mapCanvas().setMapTool(gtool)
+
 
