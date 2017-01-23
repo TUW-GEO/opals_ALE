@@ -31,7 +31,6 @@ from tools import rmEdgeTool, rmVertexTool, closeGapTool
 # Initialize Qt resources from file resources.py
 #import resources
 
-from tools import closering
 
 # Import the code for the DockWidget
 import os.path
@@ -79,9 +78,16 @@ class ALE:
         self.toolbar = self.iface.addToolBar(u'ALE')
         self.toolbar.setObjectName(u'ALE')
 
-        #print "** INITIALIZING ALE"
+        # print "** INITIALIZING ALE"
 
         self.pluginIsActive = False
+        self.iface.currentLayerChanged.connect(self.currentLayerChanged)
+        self.mapLayerRegistry = QgsMapLayerRegistry.instance()
+        self.mapLayerRegistry.layersAdded.connect(self.currentLayerChanged)
+        # check currently selected layer
+        self.currentlayer = None
+        self.currentLayerChanged()
+
 
 
 
@@ -182,25 +188,29 @@ class ALE:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        self.add_action(os.path.join(self.plugin_dir, 'imgs', 'closering.png'),
+        self.closeringaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'closering.png'),
                         'Close polygon',
                         self.closering,
-                        status_tip='Close polygon')
+                        status_tip='Close polygon',
+                        enabled_flag=False)
         self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
                         'Split at segment',
                         self.splitsegment,
                         status_tip='Split at segment',
-                        checkable=True)
+                        checkable=True,
+                        enabled_flag=False)
         self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
                         'Join lines',
                         self.joinlines,
                         status_tip='Join lines',
-                        checkable=True)
+                        checkable=True,
+                        enabled_flag=False)
         self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
                         'Remove vertex and split',
                         self.splitvertex,
                         status_tip='Remove vertex and split',
-                        checkable=True)
+                        checkable=True,
+                        enabled_flag=False)
 
     #--------------------------------------------------------------------------
 
@@ -231,6 +241,9 @@ class ALE:
             self.iface.removeToolBarIcon(action)
         # remove the toolbar
         del self.toolbar
+
+        self.iface.currentLayerChanged.disconnect(self.currentLayerChanged)
+        self.mapLayerRegistry.layersAdded.disconnect(self.currentLayerChanged)
 
     #--------------------------------------------------------------------------
 
@@ -275,4 +288,36 @@ class ALE:
             gtool = closeGapTool(self.iface.mapCanvas(), layer, self.iface, self.joinlinesaction)
             self.iface.mapCanvas().setMapTool(gtool)
 
+
+    def currentLayerChanged(self):
+        if self.currentlayer is not None:
+            self.currentlayer.editingStarted.disconnect(self.curLayerIsEditable)
+            self.currentlayer.editingStopped.disconnect(self.curLayerIsNotEditable)
+
+        layer = self.iface.legendInterface().currentLayer()
+        if layer is not None:
+            if layer.type() != QgsMapLayer.VectorLayer:
+                layer = None
+            elif layer.geometryType() != QGis.Line:
+                layer = None
+
+        if layer is not None:
+            layer.editingStarted.connect(self.curLayerIsEditable)
+            layer.editingStopped.connect(self.curLayerIsNotEditable)
+            if layer.isEditable():  # in case an editable layer is selected
+                self.curLayerIsEditable()
+            else:
+                self.curLayerIsNotEditable()
+        else:
+            self.curLayerIsNotEditable()
+
+        self.currentlayer = layer
+
+    def curLayerIsEditable(self):
+        for act in self.actions:
+            act.setEnabled(True)
+
+    def curLayerIsNotEditable(self):
+        for act in self.actions:
+            act.setEnabled(False)
 
