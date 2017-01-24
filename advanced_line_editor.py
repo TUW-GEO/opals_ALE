@@ -20,7 +20,7 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QVariant
 from PyQt4.QtGui import QAction, QIcon, QColor
 
 from qgis.core import *
@@ -189,9 +189,9 @@ class ALE:
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
         self.closeringaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'closering.png'),
-                        'Close polygon',
+                        'Close selected line to ring',
                         self.closering,
-                        status_tip='Close polygon',
+                        status_tip='Close selected line to ring',
                         enabled_flag=False)
         self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
                         'Split at segment',
@@ -210,6 +210,13 @@ class ALE:
                         self.splitvertex,
                         status_tip='Remove vertex and split',
                         checkable=True,
+                        enabled_flag=False)
+
+        self.unsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasunsure.png'),
+                        'Mark selected line(s) as unsure',
+                        self.markAsUnsure,
+                        status_tip='Mark selected line(s) as unsure',
+                        checkable=False,
                         enabled_flag=False)
 
     #--------------------------------------------------------------------------
@@ -321,3 +328,18 @@ class ALE:
         for act in self.actions:
             act.setEnabled(False)
 
+    def markAsUnsure(self):
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
+            if u'Status' not in fields:
+                res = layer.dataProvider().addAttributes([QgsField(u'Status', QVariant.Int)])
+                fields['Status'] = len(fields)
+                layer.updateFields()
+            if layer.selectedFeatureCount() > 0:
+                features = layer.selectedFeatures()
+                for feat in features:
+                    id = feat.id()
+                    print "setting %s 's Status to %s" % (id, 9)
+                    layer.changeAttributeValue(id, fields['Status'], 9)
+                    layer.removeSelection()
