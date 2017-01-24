@@ -340,6 +340,6 @@ class ALE:
                 features = layer.selectedFeatures()
                 for feat in features:
                     id = feat.id()
-                    print "setting %s 's Status to %s" % (id, 9)
                     layer.changeAttributeValue(id, fields['Status'], 9)
-                    layer.removeSelection()
+                layer.removeSelection()
+                self.iface.mapCanvas().refresh()

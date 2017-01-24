@@ -66,9 +66,7 @@ class closeGapTool(QgsMapTool):
             (closestPointID, closestFeature) = finder.closestpoint(self.layer, layerPoint)
             polyline = closestFeature.geometry().asPolyline()
             shortestDistance = QgsGeometry.fromPoint(polyline[closestPointID]).distance(QgsGeometry.fromPoint(layerPoint))
-            print closestPointID
             if closestPointID is not None and shortestDistance < self.threshold and (closestPointID == 0 or closestPointID == len(polyline)-1):
-                print "firstorlast"
                 if not self.p1:
                     self.p1 = polyline[closestPointID]
                     self.f1 = closestFeature
