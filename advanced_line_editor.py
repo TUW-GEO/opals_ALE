@@ -27,6 +27,7 @@ from qgis.core import *
 from qgis.gui import *
 
 from tools import rmEdgeTool, rmVertexTool, closeGapTool
+from addons import QgsPolylineV2
 
 # Initialize Qt resources from file resources.py
 #import resources
@@ -36,6 +37,13 @@ from tools import rmEdgeTool, rmVertexTool, closeGapTool
 import os.path
 
 
+def pointdistsq(p1, p2):
+    x1 = p1.x()
+    y1 = p1.y()
+    x2 = p2.x()
+    y2 = p2.y()
+
+    return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
 
 class ALE:
     """QGIS Plugin Implementation."""
@@ -118,7 +126,8 @@ class ALE:
         status_tip=None,
         whats_this=None,
         parent=None,
-        checkable=False):
+        checkable=False,
+        shortcut=None):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -179,6 +188,8 @@ class ALE:
             self.iface.addPluginToVectorMenu(
                 self.menu,
                 action)
+        if shortcut:
+            action.setShortcut(shortcut)
 
         self.actions.append(action)
 
@@ -192,32 +203,62 @@ class ALE:
                         'Close selected line to ring',
                         self.closering,
                         status_tip='Close selected line to ring',
-                        enabled_flag=False)
+                        enabled_flag=False,
+                        shortcut="1")
         self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
                         'Split at segment',
                         self.splitsegment,
                         status_tip='Split at segment',
                         checkable=True,
-                        enabled_flag=False)
+                        enabled_flag=False,
+                        shortcut="2")
         self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
                         'Join lines',
                         self.joinlines,
                         status_tip='Join lines',
                         checkable=True,
-                        enabled_flag=False)
+                        enabled_flag=False,
+                        shortcut="3")
+
+        self.joinlinesaction2 = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
+                        'Join lines (noninteractive)',
+                        self.joinlines2,
+                        status_tip='Join lines(non-interactive)',
+                        checkable=False,
+                        enabled_flag=False,
+                        shortcut="3")
+
         self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
                         'Remove vertex and split',
                         self.splitvertex,
                         status_tip='Remove vertex and split',
                         checkable=True,
-                        enabled_flag=False)
+                        enabled_flag=False,
+                        shortcut="4")
 
         self.unsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasunsure.png'),
                         'Mark selected line(s) as unsure',
                         self.markAsUnsure,
                         status_tip='Mark selected line(s) as unsure',
                         checkable=False,
-                        enabled_flag=False)
+                        enabled_flag=False,
+                        shortcut="5")
+
+        self.doneaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasdone.png'),
+                        'Mark selected line(s) as done',
+                        self.markAsDone,
+                        status_tip='Mark selected line(s) as done',
+                        checkable=False,
+                        enabled_flag=False,
+                        shortcut="6")
+
+        self.ununsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'unmarkasunsure.png'),
+                        'Unmark selected line(s)',
+                        self.unmarkAsUnsure,
+                        status_tip='Unmark selected line(s)',
+                        checkable=False,
+                        enabled_flag=False,
+                        shortcut="7")
 
     #--------------------------------------------------------------------------
 
@@ -273,6 +314,57 @@ class ALE:
                     layer.changeGeometry(feat.id(), polyline)
         self.iface.mapCanvas().refresh()
 
+    def joinlines2(self):
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            if layer.selectedFeatureCount() == 2:
+                f1 = layer.selectedFeatures()[0]
+                polyline1 = QgsPolylineV2.QgsPolylineV2()
+                polyline1.readGeometry(f1.geometry())
+
+                f2 = layer.selectedFeatures()[1]
+                polyline2 = QgsPolylineV2.QgsPolylineV2()
+                polyline2.readGeometry(f2.geometry())
+
+                start1 = polyline1.point2DAt(0)
+                end1 = polyline1.point2DAt(-1)
+
+                start2 = polyline2.point2DAt(0)
+                end2 = polyline2.point2DAt(-1)
+
+
+                ds1s2 = pointdistsq(start1, start2)
+                ds1e2 = pointdistsq(start1,end2)
+                de1s2 = pointdistsq(end1,start2)
+                de1e2 = pointdistsq(end1,end2)
+                mindist = min([ds1s2, ds1e2, de1e2, de1s2])
+
+                if ds1s2 == mindist:
+                    polyline1 = QgsPolylineV2.QgsPolylineV2(polyline1[::-1])
+                elif ds1e2 == mindist:
+                    polyline1 = QgsPolylineV2.QgsPolylineV2(polyline1[::-1])
+                    polyline2 = QgsPolylineV2.QgsPolylineV2(polyline2[::-1])
+                elif de1s2 == mindist:
+                    pass
+                elif de1e2 == mindist:
+                    polyline2 = QgsPolylineV2.QgsPolylineV2(polyline2[::-1])
+
+                polylineSum = polyline1 + polyline2
+                ptsNew = polylineSum
+                if len(ptsNew) > 1:  # can be a linestring
+                    plNew = ptsNew.toQgsGeometry()
+                    layer.changeGeometry(f1.id(), plNew)
+                layer.deleteFeature(f2.id())
+
+            elif layer.selectedFeatureCount() == 1:
+                f1 = layer.selectedFeatures()[0]
+                polyline = QgsPolylineV2.QgsPolylineV2.fromGeometry(f1.geometry())
+                polyline.addPoint(polyline.startPoint())
+                polyline = polyline.toQgsGeometry()
+                layer.changeGeometry(f1.id(), polyline)
+        self.iface.mapCanvas().refresh()
+
+
     def splitsegment(self):
         # get selected layer:
         layer = self.iface.legendInterface().currentLayer()
@@ -321,6 +413,9 @@ class ALE:
         self.currentlayer = layer
 
     def curLayerIsEditable(self):
+        if len(self.actions) > 0:
+            self.joinlinesaction2.setEnabled(True)
+            return
         for act in self.actions:
             act.setEnabled(True)
 
@@ -341,5 +436,38 @@ class ALE:
                 for feat in features:
                     id = feat.id()
                     layer.changeAttributeValue(id, fields['Status'], 9)
+                layer.removeSelection()
+                self.iface.mapCanvas().refresh()
+
+
+    def unmarkAsUnsure(self):
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
+            if u'Status' not in fields:
+                res = layer.dataProvider().addAttributes([QgsField(u'Status', QVariant.Int)])
+                fields['Status'] = len(fields)
+                layer.updateFields()
+            if layer.selectedFeatureCount() > 0:
+                features = layer.selectedFeatures()
+                for feat in features:
+                    id = feat.id()
+                    layer.changeAttributeValue(id, fields['Status'], None)
+                layer.removeSelection()
+                self.iface.mapCanvas().refresh()
+
+    def markAsDone(self):
+        layer = self.iface.legendInterface().currentLayer()
+        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
+            fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
+            if u'Status' not in fields:
+                res = layer.dataProvider().addAttributes([QgsField(u'Status', QVariant.Int)])
+                fields['Status'] = len(fields)
+                layer.updateFields()
+            if layer.selectedFeatureCount() > 0:
+                features = layer.selectedFeatures()
+                for feat in features:
+                    id = feat.id()
+                    layer.changeAttributeValue(id, fields['Status'], 1)
                 layer.removeSelection()
                 self.iface.mapCanvas().refresh()
