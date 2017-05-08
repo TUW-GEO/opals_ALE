@@ -358,7 +358,7 @@ class ALE:
 
             elif layer.selectedFeatureCount() == 1:
                 f1 = layer.selectedFeatures()[0]
-                polyline = QgsPolylineV2.QgsPolylineV2.fromGeometry(f1.geometry())
+                polyline = QgsPolylineV2.fromGeometry(f1.geometry())
                 polyline.addPoint(polyline.startPoint())
                 polyline = polyline.toQgsGeometry()
                 layer.changeGeometry(f1.id(), polyline)
