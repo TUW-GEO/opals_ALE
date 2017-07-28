@@ -83,13 +83,17 @@ class closeGapTool(QgsMapTool):
                     polylineSum = polyline1 + polyline2
                     ftNew = QgsFeature()
                     ptsNew = polylineSum
-                    if len(ptsNew) > 1: # can be a linestring
-                        plNew = QgsGeometry.fromPolyline(ptsNew)
-                        ftNew.setGeometry(plNew)
-                        pr = self.layer.dataProvider()
-                        pr.addFeatures([ftNew])
-                    self.layer.deleteFeature(self.f1.id())
-                    self.layer.deleteFeature(self.f2.id())
+                    print self.layer.startEditing()
+                    with edit(self.layer):
+                        if len(ptsNew) > 1:  # can be a linestring
+                            plNew = QgsGeometry.fromPolyline(ptsNew)
+                            ftNew.setGeometry(plNew)
+                            self.layer.addFeature(ftNew)
+                            #pr = self.layer.dataProvider()
+                            #pr.addFeatures([ftNew])
+                        self.layer.deleteFeature(self.f1.id())
+                        self.layer.deleteFeature(self.f2.id())
+
                     self.p1 = None
                     self.f1 = None
                     self.p2 = None
