@@ -197,76 +197,60 @@ class ALE:
         #                 status_tip='Close selected line to ring',
         #                 enabled_flag=False,
         #                 shortcut="1")
-        self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
-                        'Split at segment',
-                        self.splitsegment,
-                        status_tip='Split at segment',
-                        checkable=True,
-                        enabled_flag=False,
-                        shortcut="s")
-        self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
-                        'Join lines',
-                        self.joinlines,
-                        status_tip='Join lines',
-                        checkable=True,
+        # self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
+        #                 'Split at segment',
+        #                 self.splitsegment,
+        #                 status_tip='Split at segment',
+        #                 checkable=True,
+        #                 enabled_flag=False,
+        #                 shortcut="2")
+        # self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
+        #                 'Join lines',
+        #                 self.joinlines,
+        #                 status_tip='Join lines',
+        #                 checkable=True,
+        #                 enabled_flag=False,
+        #                 shortcut="3")
+
+        self.joinlinesaction2 = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
+                        'Join lines (noninteractive)',
+                        self.joinlines2,
+                        status_tip='Join lines(non-interactive)',
+                        checkable=False,
                         enabled_flag=False,
                         shortcut="j")
-
-        # self.joinlinesaction2 = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
-        #                 'Join lines (noninteractive)',
-        #                 self.joinlines2,
-        #                 status_tip='Join lines(non-interactive)',
+        #
+        # self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
+        #                 'Remove vertex and split',
+        #                 self.splitvertex,
+        #                 status_tip='Remove vertex and split',
+        #                 checkable=True,
+        #                 enabled_flag=False,
+        #                 shortcut="4")
+        #
+        # self.unsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasunsure.png'),
+        #                 'Mark selected line(s) as unsure',
+        #                 self.markAsUnsure,
+        #                 status_tip='Mark selected line(s) as unsure',
         #                 checkable=False,
         #                 enabled_flag=False,
-        #                 shortcut=None)
-
-        self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
-                        'Remove vertex and split',
-                        self.splitvertex,
-                        status_tip='Remove vertex and split',
-                        checkable=True,
-                        enabled_flag=False,
-                        shortcut="v")
-
-        self.unsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasunsure.png'),
-                        'Mark selected line(s) as unsure',
-                        self.markAsUnsure,
-                        status_tip='Mark selected line(s) as unsure',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut="u")
-
-        self.doneaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasdone.png'),
-                        'Mark selected line(s) as done',
-                        self.markAsDone,
-                        status_tip='Mark selected line(s) as done',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut="d")
-
-        self.ununsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'unmarkasunsure.png'),
-                        'Unmark selected line(s)',
-                        self.unmarkAsUnsure,
-                        status_tip='Unmark selected line(s)',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut="r")
-
-        self.selectaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'select.png'),
-                        'Select tool',
-                        self.iface.actionSelect().trigger,
-                        status_tip='Select line(s)',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut=" ")
-
-        self.panaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'pan.png'),
-                        'Pan tool',
-                        self.iface.actionPan().trigger,
-                        status_tip='Pan',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut="p")
+        #                 shortcut="5")
+        #
+        # self.doneaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'markasdone.png'),
+        #                 'Mark selected line(s) as done',
+        #                 self.markAsDone,
+        #                 status_tip='Mark selected line(s) as done',
+        #                 checkable=False,
+        #                 enabled_flag=False,
+        #                 shortcut="6")
+        #
+        # self.ununsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'unmarkasunsure.png'),
+        #                 'Unmark selected line(s)',
+        #                 self.unmarkAsUnsure,
+        #                 status_tip='Unmark selected line(s)',
+        #                 checkable=False,
+        #                 enabled_flag=False,
+        #                 shortcut="7")
 
     #--------------------------------------------------------------------------
 
@@ -376,6 +360,9 @@ class ALE:
         self.currentlayer = layer
 
     def curLayerIsEditable(self):
+        if len(self.actions) > 0:
+            self.joinlinesaction2.setEnabled(True)
+            return
         for act in self.actions:
             act.setEnabled(True)
 
