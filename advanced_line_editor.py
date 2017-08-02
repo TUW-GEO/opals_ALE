@@ -366,6 +366,7 @@ class ALE:
             act.setEnabled(True)
 
     def curLayerIsNotEditable(self):
+        self.iface.actionPan().trigger()
         for act in self.actions:
             act.setEnabled(False)
 
