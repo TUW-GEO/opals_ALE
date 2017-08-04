@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QVariant
-from PyQt4.QtGui import QAction, QIcon, QColor, QCursor
+from PyQt4.QtGui import QAction, QIcon, QColor, QCursor, QPixmap, QBitmap
 
 from qgis.core import *
 from qgis.gui import *
@@ -79,6 +79,7 @@ class ALE:
         self.toolbar.setObjectName(u'ALE')
 
         # print "** INITIALIZING ALE"
+        self.bm = QBitmap(os.path.join(self.plugin_dir, 'imgs', 'cursor-cross.png'))
 
         self.pluginIsActive = False
         self.iface.currentLayerChanged.connect(self.currentLayerChanged)
@@ -319,9 +320,8 @@ class ALE:
         layer = self.iface.legendInterface().currentLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             etool = rmEdgeTool(self.iface.mapCanvas(), layer, self.iface, self.splitsegmentaction)
-            curs = QCursor()
-            curs.setShape(Qt.CrossCursor)
-            etool.parent().setCursor(curs)
+            c = QCursor(self.bm, self.bm)
+            self.iface.mapCanvas().setCursor(c)
             self.iface.mapCanvas().setMapTool(etool)
 
     def splitvertex(self):
@@ -329,10 +329,9 @@ class ALE:
         layer = self.iface.legendInterface().currentLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             vtool = rmVertexTool(self.iface.mapCanvas(), layer, self.iface, self.splitvertexaction)
-            curs = QCursor()
-            curs.setShape(Qt.CrossCursor)
-            vtool.parent().setCursor(curs)
+            c = QCursor(self.bm, self.bm)
             self.iface.mapCanvas().setMapTool(vtool)
+            self.iface.mapCanvas().setCursor(c)
 
 
     def joinlines(self):
