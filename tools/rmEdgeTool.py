@@ -23,6 +23,13 @@ class rmEdgeTool(QgsMapTool):
         if self.rb:
             self.canvas.scene().removeItem(self.rb)
         layerPoint = self.toLayerCoordinates(self.layer, event.pos())
+
+        # find out which features are visible
+        ltm = self.iface.layerTreeView().model()
+        lsi = self.layer.rendererV2().legendSymbolItemsV2()
+        ruleKeys = {l.ruleKey(): l.label() for l in lsi}
+        
+
         # get closest feature
         shortestDistance = float("inf")
         closestFeature = None

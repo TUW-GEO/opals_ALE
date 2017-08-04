@@ -21,7 +21,7 @@
  ***************************************************************************/
 """
 from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QVariant
-from PyQt4.QtGui import QAction, QIcon, QColor
+from PyQt4.QtGui import QAction, QIcon, QColor, QCursor
 
 from qgis.core import *
 from qgis.gui import *
@@ -319,6 +319,9 @@ class ALE:
         layer = self.iface.legendInterface().currentLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             etool = rmEdgeTool(self.iface.mapCanvas(), layer, self.iface, self.splitsegmentaction)
+            curs = QCursor()
+            curs.setShape(Qt.CrossCursor)
+            etool.parent().setCursor(curs)
             self.iface.mapCanvas().setMapTool(etool)
 
     def splitvertex(self):
@@ -326,6 +329,9 @@ class ALE:
         layer = self.iface.legendInterface().currentLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             vtool = rmVertexTool(self.iface.mapCanvas(), layer, self.iface, self.splitvertexaction)
+            curs = QCursor()
+            curs.setShape(Qt.CrossCursor)
+            vtool.parent().setCursor(curs)
             self.iface.mapCanvas().setMapTool(vtool)
 
 
