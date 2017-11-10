@@ -1,3 +1,3 @@
 from rmVertexTool import rmVertexTool
 from rmEdgeTool import rmEdgeTool
-from closeGapTool import closeGapTool
+from closeGapTool2 import closeGapTool2

@@ -6,7 +6,6 @@
  Adds line editing tools (segment deletion, ...)
                               -------------------
         begin                : 2017-01-18
-        git sha              : $Format:%H$
         copyright            : (C) 2017 by lwiniwar/TU Wien
         email                : lukas.winiwarter@geo.tuwien.ac.at
  ***************************************************************************/
@@ -26,7 +25,7 @@ from PyQt4.QtGui import QAction, QIcon, QColor, QCursor, QPixmap, QBitmap
 from qgis.core import *
 from qgis.gui import *
 
-from tools import rmEdgeTool, rmVertexTool, closeGapTool
+from tools import rmEdgeTool, rmVertexTool, closeGapTool2
 
 # Initialize Qt resources from file resources.py
 #import resources
@@ -74,7 +73,6 @@ class ALE:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&Advanced Line Editor')
-        # TODO: We are going to let the user set this up in a future iteration
         self.toolbar = self.iface.addToolBar(u'ALE')
         self.toolbar.setObjectName(u'ALE')
 
@@ -192,12 +190,6 @@ class ALE:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        # self.closeringaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'closering.png'),
-        #                 'Close selected line to ring',
-        #                 self.closering,
-        #                 status_tip='Close selected line to ring',
-        #                 enabled_flag=False,
-        #                 shortcut="1")
         self.splitsegmentaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'splitsegment.png'),
                         'Split at segment',
                         self.splitsegment,
@@ -205,13 +197,6 @@ class ALE:
                         checkable=True,
                         enabled_flag=False,
                         shortcut="Ctrl+1")
-        # self.joinlinesaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'joinlines.png'),
-        #                 'Join lines',
-        #                 self.joinlines,
-        #                 status_tip='Join lines',
-        #                 checkable=True,
-        #                 enabled_flag=False,
-        #                 shortcut="3")
 
         self.splitvertexaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'rmvertex.png'),
                         'Remove vertex and split',
@@ -248,34 +233,21 @@ class ALE:
 
         self.ununsureaction = self.add_action(os.path.join(self.plugin_dir, 'imgs', 'unmarkasunsure.png'),
                         'Unmark selected line(s)',
-                        self.unmarkAsUnsure,
-                        status_tip='Unmark selected line(s)',
-                        checkable=False,
-                        enabled_flag=False,
-                        shortcut="r")
+                                              self.removeMarks,
+                                              status_tip='Unmark selected line(s)',
+                                              checkable=False,
+                                              enabled_flag=False,
+                                              shortcut="r")
 
 
     #--------------------------------------------------------------------------
 
     def onClosePlugin(self):
-        """Cleanup necessary items here when plugin dockwidget is closed"""
-
-        #print "** CLOSING ALE"
-
-
-        # remove this statement if dockwidget is to remain
-        # for reuse if plugin is reopened
-        # Commented next statement since it causes QGIS crashe
-        # when closing the docked window:
-        # self.dockwidget = None
-
         self.pluginIsActive = False
 
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
-
-        #print "** UNLOAD ALE"
 
         for action in self.actions:
             self.iface.removePluginVectorMenu(
@@ -296,22 +268,8 @@ class ALE:
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
-    def closering(self):
-        # get selected layer:
-        layer = self.iface.legendInterface().currentLayer()
-        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
-            if layer.selectedFeatureCount() > 0:
-                features = layer.selectedFeatures()
-                for feat in features:
-                    geom = feat.geometry().asPolyline()
-                    geom.append(geom[0])
-                    polyline = QgsGeometry.fromPolyline(geom)
-                    layer.changeGeometry(feat.id(), polyline)
-        self.iface.mapCanvas().refresh()
-
     def joinlines2(self):
-        from tools import closeGapTool2
-        tool = closeGapTool2.closeGapTool2()
+        tool = closeGapTool2()
         tool.closeGapTool2(self.iface)
         tool = None
 
@@ -332,14 +290,6 @@ class ALE:
             c = QCursor(self.bm, self.bm)
             self.iface.mapCanvas().setMapTool(vtool)
             self.iface.mapCanvas().setCursor(c)
-
-
-    def joinlines(self):
-        # get selected layer:
-        layer = self.iface.legendInterface().currentLayer()
-        if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
-            gtool = closeGapTool(self.iface.mapCanvas(), layer, self.iface, self.joinlinesaction)
-            self.iface.mapCanvas().setMapTool(gtool)
 
 
     def currentLayerChanged(self):
@@ -367,8 +317,12 @@ class ALE:
         self.currentlayer = layer
 
     def curLayerIsEditable(self):
+        layer = self.iface.legendInterface().currentLayer()
         for act in self.actions:
             act.setEnabled(True)
+        #if layer.wkbType() == QGis.WKBLineString25D or layer.wkbType() == QGis.WKBMultiLineString25D:
+        #    self.actions[0].setEnabled(False)
+        #    self.actions[1].setEnabled(False) # disallow z-breaking operations on 3d layers
 
     def curLayerIsNotEditable(self):
         self.iface.actionPan().trigger()
@@ -391,8 +345,7 @@ class ALE:
                 layer.removeSelection()
                 self.iface.mapCanvas().refresh()
 
-
-    def unmarkAsUnsure(self):
+    def removeMarks(self):
         layer = self.iface.legendInterface().currentLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}

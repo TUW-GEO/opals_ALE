@@ -10,7 +10,7 @@
 name=Advanced Line Editor
 qgisMinimumVersion=2.10
 description=Adds line editing tools (segment deletion, ...)
-version=0.1
+version=1.0
 author=lwiniwar/TU Wien
 email=lukas.winiwarter@geo.tuwien.ac.at
 
@@ -32,7 +32,7 @@ homepage=http://geo.tuwien.ac.at
 category=Vector
 icon=icon.png
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
