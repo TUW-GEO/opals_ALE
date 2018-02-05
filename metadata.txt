@@ -11,10 +11,10 @@ name=Advanced Line Editor
 qgisMinimumVersion=2.10
 description=Adds line editing tools (segment deletion, ...)
 version=1.0
-author=lwiniwar/TU Wien
+author=lwiniwar, TU Wien
 email=lukas.winiwarter@geo.tuwien.ac.at
 
-about=This plugin adds functionality to enable faster line editing, e.g. for breakline refinement after automatic delineation.
+about=This plugin adds functionality to enable faster line editing, esp. when working with 3D lines (preserving Z-Coordinate). Labelling of lines with a "status"-Attribute is also possible.
 
 tracker=https://github.com/lwiniwar/ALE/issues
 repository=https://github.com/lwiniwar/ALE
