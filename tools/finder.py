@@ -1,4 +1,5 @@
-from qgis.core import *
+from builtins import range
+from qgis.core import QgsGeometry
 
 def closestpoint(layer, layerPoint):
 
@@ -7,7 +8,7 @@ def closestpoint(layer, layerPoint):
     closestFeature = None
     for f in layer.getFeatures():
         if f.geometry():
-            dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+            dist = f.geometry().distance(QgsGeometry.fromPointXY(layerPoint))
             if dist < shortestDistance:
                 shortestDistance = dist
                 closestFeature = f
@@ -19,7 +20,7 @@ def closestpoint(layer, layerPoint):
         polyline = closestFeature.geometry().asPolyline()
         for i in range(len(polyline)):
             point = polyline[i]
-            dist = QgsGeometry.fromPoint(point).distance(QgsGeometry.fromPoint(layerPoint))
+            dist = QgsGeometry.fromPointXY(point).distance(QgsGeometry.fromPointXY(layerPoint))
             if dist < shortestDistance:
                 shortestDistance = dist
                 closestPointID = i

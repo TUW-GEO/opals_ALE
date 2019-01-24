@@ -19,13 +19,15 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QVariant
-from PyQt4.QtGui import QAction, QIcon, QColor, QCursor, QPixmap, QBitmap
+from __future__ import absolute_import
+from builtins import object
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt, QVariant
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon, QColor, QCursor, QBitmap
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsProject, QgsMapLayer, Qgis, QgsField, QgsWkbTypes
 
-from tools import rmEdgeTool, rmVertexTool, closeGapTool2
+from .tools import rmEdgeTool, rmVertexTool, closeGapTool2
 
 # Initialize Qt resources from file resources.py
 #import resources
@@ -36,7 +38,7 @@ import os.path
 
 
 
-class ALE:
+class ALE(object):
     """QGIS Plugin Implementation."""
 
     def __init__(self, iface):
@@ -81,8 +83,8 @@ class ALE:
 
         self.pluginIsActive = False
         self.iface.currentLayerChanged.connect(self.currentLayerChanged)
-        self.mapLayerRegistry = QgsMapLayerRegistry.instance()
-        self.mapLayerRegistry.layersAdded.connect(self.currentLayerChanged)
+        self.qgsProject = QgsProject.instance()
+        self.qgsProject.layersAdded.connect(self.currentLayerChanged)
         # check currently selected layer
         self.currentlayer = None
         self.currentLayerChanged()
@@ -258,7 +260,7 @@ class ALE:
         del self.toolbar
 
         self.iface.currentLayerChanged.disconnect(self.currentLayerChanged)
-        self.mapLayerRegistry.layersAdded.disconnect(self.currentLayerChanged)
+        self.qgsProject.layersAdded.disconnect(self.currentLayerChanged)
 
     #--------------------------------------------------------------------------
 
@@ -275,7 +277,7 @@ class ALE:
 
     def splitsegment(self):
         # get selected layer:
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             etool = rmEdgeTool(self.iface.mapCanvas(), layer, self.iface, self.splitsegmentaction)
             c = QCursor(self.bm, self.bm)
@@ -284,7 +286,7 @@ class ALE:
 
     def splitvertex(self):
         # get selected layer:
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             vtool = rmVertexTool(self.iface.mapCanvas(), layer, self.iface, self.splitvertexaction)
             c = QCursor(self.bm, self.bm)
@@ -297,11 +299,11 @@ class ALE:
             self.currentlayer.editingStarted.disconnect(self.curLayerIsEditable)
             self.currentlayer.editingStopped.disconnect(self.curLayerIsNotEditable)
 
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer is not None:
             if layer.type() != QgsMapLayer.VectorLayer:
                 layer = None
-            elif layer.geometryType() != QGis.Line:
+            elif layer.geometryType() != QgsWkbTypes.LineGeometry:
                 layer = None
 
         if layer is not None:
@@ -317,7 +319,7 @@ class ALE:
         self.currentlayer = layer
 
     def curLayerIsEditable(self):
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         for act in self.actions:
             act.setEnabled(True)
         #if layer.wkbType() == QGis.WKBLineString25D or layer.wkbType() == QGis.WKBMultiLineString25D:
@@ -325,12 +327,14 @@ class ALE:
         #    self.actions[1].setEnabled(False) # disallow z-breaking operations on 3d layers
 
     def curLayerIsNotEditable(self):
-        self.iface.actionPan().trigger()
         for act in self.actions:
+            if act.isChecked():
+                self.iface.actionPan().trigger()
+                act.setChecked(False)
             act.setEnabled(False)
 
     def markAsUnsure(self):
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
             if u'Status' not in fields:
@@ -346,7 +350,7 @@ class ALE:
                 self.iface.mapCanvas().refresh()
 
     def removeMarks(self):
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
             if u'Status' not in fields:
@@ -362,7 +366,7 @@ class ALE:
                 self.iface.mapCanvas().refresh()
 
     def markAsDone(self):
-        layer = self.iface.legendInterface().currentLayer()
+        layer = self.iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             fields = {field.name(): id for (id, field) in enumerate(layer.dataProvider().fields())}
             if u'Status' not in fields:

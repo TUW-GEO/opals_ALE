@@ -1,11 +1,12 @@
 
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon, QColor
+from builtins import object
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon, QColor
 
 from ..addons import QgsPolylineV2
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsMapLayer
 
 
 def pointdistsq(p1, p2):
@@ -16,12 +17,12 @@ def pointdistsq(p1, p2):
 
     return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)
 
-class closeGapTool2:
+class closeGapTool2(object):
     def __init__(self):
         pass
 
     def closeGapTool2(self, iface):
-        layer = iface.legendInterface().currentLayer()
+        layer = iface.activeLayer()
         if layer.isEditable() and layer.type() == QgsMapLayer.VectorLayer:
             if layer.selectedFeatureCount() == 2:
                 f1 = layer.selectedFeatures()[0]
@@ -69,4 +70,4 @@ class closeGapTool2:
                 polyline = polyline.toQgsGeometry()
                 layer.changeGeometry(f1.id(), polyline)
         iface.mapCanvas().refresh()
-        layer.setSelectedFeatures([])
+        layer.selectByIds([])

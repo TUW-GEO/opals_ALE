@@ -1,10 +1,12 @@
 
 
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon, QColor
+from builtins import range
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon, QColor
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsGeometry, QgsFeature, QgsPoint
+from qgis.gui import QgsMapTool, QgsRubberBand
 
 class rmEdgeTool(QgsMapTool):
     def __init__(self, canvas, layer, iface, action):
@@ -14,7 +16,7 @@ class rmEdgeTool(QgsMapTool):
         self.iface = iface
         self.action = action
         self.rb = None
-        self.threshold = QSettings().value('ale/threshold')
+        self.threshold = float(QSettings().value('ale/threshold'))
 
     def canvasPressEvent(self, event):
         pass
@@ -26,7 +28,7 @@ class rmEdgeTool(QgsMapTool):
 
         # find out which features are visible
         ltm = self.iface.layerTreeView().model()
-        lsi = self.layer.rendererV2().legendSymbolItemsV2()
+        lsi = self.layer.renderer().legendSymbolItems()
         ruleKeys = {l.ruleKey(): l.label() for l in lsi}
         
 
@@ -35,7 +37,7 @@ class rmEdgeTool(QgsMapTool):
         closestFeature = None
         for f in self.layer.getFeatures():
             if f.geometry():
-                dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+                dist = f.geometry().distance(QgsGeometry.fromPointXY(layerPoint))
                 if dist < shortestDistance:
                     shortestDistance = dist
                     closestFeature = f
@@ -47,7 +49,7 @@ class rmEdgeTool(QgsMapTool):
             polyline = closestFeature.geometry().asPolyline()
             for i in range(len(polyline) - 1):
                 linePart = polyline[i:i + 2]
-                dist = QgsGeometry.fromPolyline(linePart).distance(QgsGeometry.fromPoint(layerPoint))
+                dist = QgsGeometry.fromPolylineXY(linePart).distance(QgsGeometry.fromPointXY(layerPoint))
                 if dist < shortestDistance:
                     shortestDistance = dist
                     closestPointID = i
@@ -55,7 +57,7 @@ class rmEdgeTool(QgsMapTool):
                 self.rb = QgsRubberBand(self.canvas, False)
                 # False = not a polygon
                 points = polyline[closestPointID:closestPointID+2]
-                self.rb.setToGeometry(QgsGeometry.fromPolyline(points), None)
+                self.rb.setToGeometry(QgsGeometry.fromPolylineXY(points), None)
                 self.rb.setColor(QColor(0, 0, 255))
                 self.rb.setWidth(3)
 
@@ -67,7 +69,7 @@ class rmEdgeTool(QgsMapTool):
         closestFeature = None
         for f in self.layer.getFeatures():
             if f.geometry():
-                dist = f.geometry().distance(QgsGeometry.fromPoint(layerPoint))
+                dist = f.geometry().distance(QgsGeometry.fromPointXY(layerPoint))
                 if dist < shortestDistance:
                     shortestDistance = dist
                     closestFeature = f
@@ -79,7 +81,7 @@ class rmEdgeTool(QgsMapTool):
             polyline = closestFeature.geometry().asPolyline()
             for i in range(len(polyline)-1):
                 linePart = polyline[i:i+2]
-                dist = QgsGeometry.fromPolyline(linePart).distance(QgsGeometry.fromPoint(layerPoint))
+                dist = QgsGeometry.fromPolylineXY(linePart).distance(QgsGeometry.fromPointXY(layerPoint))
                 if dist < shortestDistance:
                     shortestDistance = dist
                     closestPointID = i
@@ -87,13 +89,13 @@ class rmEdgeTool(QgsMapTool):
                 ftNew = QgsFeature()
                 ptsNew = polyline[closestPointID+1:]
                 if len(ptsNew) > 1: # can be a linestring
-                    plNew = QgsGeometry.fromPolyline(ptsNew)
+                    plNew = QgsGeometry.fromPolylineXY(ptsNew)
                     ftNew.setGeometry(plNew)
                     pr = self.layer.dataProvider()
                     pr.addFeatures([ftNew])
                 ptsOld = polyline[:closestPointID+1]
                 if len(ptsOld) > 1: # can be a linestring
-                    plOld = QgsGeometry.fromPolyline(ptsOld)
+                    plOld = QgsGeometry.fromPolylineXY(ptsOld)
                     self.layer.changeGeometry(closestFeature.id(), plOld)
                 else:
                     self.layer.deleteFeature(closestFeature.id())

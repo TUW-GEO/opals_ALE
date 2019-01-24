@@ -1,11 +1,14 @@
+from __future__ import absolute_import
 
-from PyQt4.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
-from PyQt4.QtGui import QAction, QIcon, QColor
+from qgis.PyQt.QtCore import QSettings, QTranslator, qVersion, QCoreApplication, Qt
+from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtGui import QIcon, QColor
 
-from qgis.core import *
-from qgis.gui import *
+from qgis.core import QgsGeometry, QgsFeature, QgsPointXY
+from qgis.gui import QgsMapTool, QgsRubberBand, QgsVertexMarker
 
-import finder
+
+from . import finder
 
 class rmVertexTool(QgsMapTool):
     def __init__(self, canvas, layer, iface, action):
@@ -16,7 +19,7 @@ class rmVertexTool(QgsMapTool):
         self.action = action
         self.rb = None
         self.vx = None
-        self.threshold = QSettings().value('ale/threshold')
+        self.threshold = float(QSettings().value('ale/threshold'))
 
     def canvasPressEvent(self, event):
         pass
@@ -29,16 +32,16 @@ class rmVertexTool(QgsMapTool):
         layerPoint = self.toLayerCoordinates(self.layer, event.pos())
         (closestPointID, closestFeature) = finder.closestpoint(self.layer, layerPoint)
         polyline = closestFeature.geometry().asPolyline()
-        shortestDistance = QgsGeometry.fromPoint(polyline[closestPointID]).distance(QgsGeometry.fromPoint(layerPoint))
+        shortestDistance = QgsGeometry.fromPointXY(polyline[closestPointID]).distance(QgsGeometry.fromPointXY(layerPoint))
 
         if closestPointID and shortestDistance < self.threshold:
             self.rb = QgsRubberBand(self.canvas, False)
             linePart = polyline[closestPointID-1:closestPointID+2]
-            self.rb.setToGeometry(QgsGeometry.fromPolyline(linePart), None)
+            self.rb.setToGeometry(QgsGeometry.fromPolylineXY(linePart), None)
             self.rb.setColor(QColor(0, 0, 255))
             self.rb.setWidth(3)
             self.vx = QgsVertexMarker(self.canvas)
-            self.vx.setCenter(QgsPoint(polyline[closestPointID]))
+            self.vx.setCenter(QgsPointXY(polyline[closestPointID]))
             self.vx.setColor(QColor(0, 255, 0))
             self.vx.setIconSize(5)
             self.vx.setIconType(QgsVertexMarker.ICON_X)# or ICON_CROSS, ICON_BOX
@@ -48,18 +51,18 @@ class rmVertexTool(QgsMapTool):
         layerPoint = self.toLayerCoordinates(self.layer, event.pos())
         (closestPointID, closestFeature) = finder.closestpoint(self.layer, layerPoint)
         polyline = closestFeature.geometry().asPolyline()
-        shortestDistance = QgsGeometry.fromPoint(polyline[closestPointID]).distance(QgsGeometry.fromPoint(layerPoint))
+        shortestDistance = QgsGeometry.fromPointXY(polyline[closestPointID]).distance(QgsGeometry.fromPointXY(layerPoint))
         if closestPointID and shortestDistance < self.threshold:
             ftNew = QgsFeature()
             ptsNew = polyline[closestPointID+1:]
             if len(ptsNew) > 1: # can be a linestring
-                plNew = QgsGeometry.fromPolyline(ptsNew)
+                plNew = QgsGeometry.fromPolylineXY(ptsNew)
                 ftNew.setGeometry(plNew)
                 pr = self.layer.dataProvider()
                 pr.addFeatures([ftNew])
             ptsOld = polyline[:closestPointID]
             if len(ptsOld) > 1: # can be a linestring
-                plOld = QgsGeometry.fromPolyline(ptsOld)
+                plOld = QgsGeometry.fromPolylineXY(ptsOld)
                 self.layer.changeGeometry(closestFeature.id(), plOld)
             else:
                 self.layer.deleteFeature(closestFeature.id())
