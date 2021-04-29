@@ -1,5 +1,8 @@
 from qgis.core import *
-import ogr
+try:
+    from osgeo import ogr
+except ImportError:
+    import ogr
 
 def fromGeometry(geometry):
     instance = QgsPolylineV2()
