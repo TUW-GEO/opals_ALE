@@ -8,7 +8,7 @@
 
 [general]
 name=Advanced Line Editor
-qgisMinimumVersion=3.0
+qgisMinimumVersion=4.0
 description=Adds line editing tools (segment deletion, ...)
 version=1.3
 author=lwiniwar, TU Wien
